@@ -2,8 +2,8 @@ import { cookies } from 'next/headers';
 import { verifyJWT } from '@/lib/utils/auth';
 import { redirect } from 'next/navigation';
 
-export default function DashboardPage() {
-  const cookieStore = cookies();
+export default async function DashboardPage() {
+  const cookieStore = await cookies();
   const token = cookieStore.get('token')?.value;
   const auth = token ? verifyJWT(token) : { valid: false };
   if (!auth.valid) redirect('/dashboard/login');
