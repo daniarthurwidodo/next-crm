@@ -53,7 +53,7 @@ export function verifyJWT(token: string): { valid: boolean; username?: string } 
 }
 
 // Simple hash/verify (replace with bcrypt in production)
-async function hashPassword(password: string): Promise<string> {
+export async function hashPassword(password: string): Promise<string> {
   return Promise.resolve(Buffer.from(password).toString('base64'));
 }
 async function verifyPassword(password: string, hash: string): Promise<boolean> {
