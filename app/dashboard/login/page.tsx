@@ -1,6 +1,6 @@
 "use client";
 import { useState } from 'react';
-import { loginUser } from '@/lib/utils/auth';
+// ...existing code...
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 
@@ -13,12 +13,21 @@ export default function LoginPage() {
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
     setError('');
-    const res = await loginUser(username, password);
-    if (res.success && res.token) {
-      document.cookie = `token=${res.token}; path=/;`;
-      router.push('/dashboard');
-    } else {
-      setError(res.message || 'Login failed');
+    try {
+      const resp = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+      const data = await resp.json();
+      if (data.success && data.token) {
+        document.cookie = `token=${data.token}; path=/;`;
+        router.push('/dashboard');
+      } else {
+        setError(data.error || 'Login failed');
+      }
+    } catch (err) {
+      setError('Login failed');
     }
   }
 
