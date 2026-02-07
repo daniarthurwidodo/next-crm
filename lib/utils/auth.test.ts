@@ -2,7 +2,7 @@ import { vi } from 'vitest';
 
 // Ensure env vars for code that may read them at import-time
 process.env.NEXT_PUBLIC_SUPABASE_URL = 'http://localhost:54321';
-process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'test_anon_key';
+process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY = 'test_anon_key';
 process.env.JWT_SECRET = 'test_jwt_secret';
 
 // Test-level mock functions

@@ -1,6 +1,5 @@
 "use client";
 import { useState } from 'react';
-import { registerUser } from '@/lib/utils/auth';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 
@@ -13,12 +12,21 @@ export default function RegisterPage() {
   async function handleRegister(e: React.FormEvent) {
     e.preventDefault();
     setError('');
-    const res = await registerUser(username, password);
-    if (res.success && res.token) {
-      document.cookie = `token=${res.token}; path=/;`;
-      router.push('/dashboard');
-    } else {
-      setError(res.message || 'Registration failed');
+    try {
+      const resp = await fetch('/api/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+      })
+      const data = await resp.json()
+      if (resp.ok && data.token) {
+        document.cookie = `token=${data.token}; path=/;`;
+        router.push('/dashboard');
+      } else {
+        setError(data.error || 'Registration failed')
+      }
+    } catch (err: any) {
+      setError(err?.message || 'Registration failed')
     }
   }
 
