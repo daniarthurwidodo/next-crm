@@ -16,7 +16,7 @@ export async function POST(req: Request) {
     const email = isEmail ? username : `${username}@local.invalid`
 
     // Authenticate using Supabase's signInWithPassword
-    const { data, error } = await supabaseService.auth.signInWithPassword({
+    const { data, error } = await (supabaseService as any).auth.signInWithPassword({
       email,
       password,
     })
