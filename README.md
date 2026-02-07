@@ -27,6 +27,9 @@ Send any file to your Google Drive using a simple shortcode. Share your unique l
 - `bun run build` – Build for production
 - `bun run lint` – Lint code
 
+## E2E tests (Playwright)
+Run `bunx playwright test` (ensure the dev server is running on the configured base URL). Optional env vars: `E2E_TEST_USER` and `E2E_TEST_PASSWORD` for a pre-created test user; if unset, defaults `e2euser` / `e2epassword` are used for fixtures that need credentials.
+
 ## Deployment
 Deploy on Vercel for best results. Configure environment variables for Supabase and Google OAuth.
 
