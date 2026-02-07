@@ -56,6 +56,6 @@ export function verifyJWT(token: string): { valid: boolean; username?: string } 
 export async function hashPassword(password: string): Promise<string> {
   return Promise.resolve(Buffer.from(password).toString('base64'));
 }
-async function verifyPassword(password: string, hash: string): Promise<boolean> {
+export async function verifyPassword(password: string, hash: string): Promise<boolean> {
   return Promise.resolve(Buffer.from(password).toString('base64') === hash);
 }
