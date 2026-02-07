@@ -1,6 +1,8 @@
 import { cookies } from 'next/headers';
 import { verifyJWT } from '@/lib/utils/auth';
 import { redirect } from 'next/navigation';
+import { Sidebar } from '@/components/ui/sidebar';
+import './dashboard.css';
 
 export default async function DashboardPage() {
   const cookieStore = await cookies();
@@ -8,9 +10,12 @@ export default async function DashboardPage() {
   const auth = token ? verifyJWT(token) : { valid: false };
   if (!auth.valid) redirect('/dashboard/login');
   return (
-    <main className="max-w-xl mx-auto mt-20">
-      <h1 className="text-3xl font-bold mb-4">Welcome, {auth.username}!</h1>
-      <p>This is your dashboard.</p>
-    </main>
+    <div className="dashboard-container">
+      <Sidebar username={auth.username || 'Unknown'} menuItems={[{ label: 'Dashboard' }]} />
+      <main className="dashboard-main">
+        <h1 className="dashboard-title">Welcome, {auth.username}!</h1>
+        <p className="dashboard-content">This is your dashboard.</p>
+      </main>
+    </div>
   );
 }
