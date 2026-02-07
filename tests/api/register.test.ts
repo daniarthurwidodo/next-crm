@@ -12,7 +12,7 @@ vi.mock('@supabase/supabase-js', () => ({
   createClient: () => ({
     auth: {
       admin: {
-        createUser: async (..._args: any[]) => mockCreateUser(),
+        createUser: async () => mockCreateUser(),
       },
     },
   }),
@@ -33,8 +33,7 @@ describe('/api/register', () => {
 
   it('creates a user and returns a token', async () => {
     mockCreateUser.mockResolvedValue({ data: { user: { id: 'user_1' } }, error: null })
-
-    const req = { json: async () => ({ username: 'anomali', password: 'secret' }) } as any
+    const req: Request = { json: async () => ({ username: 'anomali', password: 'secret' }) } as unknown as Request
     const res = await POST(req)
     expect(res.status).toBe(201)
     const body = await res.json()
@@ -44,12 +43,45 @@ describe('/api/register', () => {
 
   it('returns 409 if username exists', async () => {
     mockCreateUser.mockResolvedValue({ data: null, error: { message: 'duplicate key value violates unique constraint' } })
-
-    const req = { json: async () => ({ username: 'exists', password: 'secret' }) } as any
+    const req: Request = { json: async () => ({ username: 'exists', password: 'secret' }) } as unknown as Request
     const res = await POST(req)
     expect(res.status).toBe(409)
     const body = await res.json()
     expect(body.error).toMatch(/Username already exists/)
+  })
+
+  it('returns 400 if missing username', async () => {
+    const req: Request = { json: async () => ({ password: 'secret' }) } as unknown as Request
+    const res = await POST(req)
+    expect(res.status).toBe(400)
+    const body = await res.json()
+    expect(body.error).toMatch(/Missing username or password/)
+  })
+
+  it('returns 400 if missing password', async () => {
+    const req: Request = { json: async () => ({ username: 'anomali' }) } as unknown as Request
+    const res = await POST(req)
+    expect(res.status).toBe(400)
+    const body = await res.json()
+    expect(body.error).toMatch(/Missing username or password/)
+  })
+
+  it('returns 500 if createUser throws', async () => {
+    mockCreateUser.mockImplementation(() => { throw new Error('Unexpected failure') })
+    const req: Request = { json: async () => ({ username: 'anomali', password: 'secret' }) } as unknown as Request
+    const res = await POST(req)
+    expect(res.status).toBe(500)
+    const body = await res.json()
+    expect(body.error).toMatch(/Unexpected failure/)
+  })
+
+  it('returns 500 for weak password', async () => {
+    mockCreateUser.mockResolvedValue({ data: null, error: { message: 'Password is too weak' } })
+    const req: Request = { json: async () => ({ username: 'anomali', password: '123' }) } as unknown as Request
+    const res = await POST(req)
+    expect(res.status).toBe(500)
+    const body = await res.json()
+    expect(body.error).toMatch(/Password is too weak/)
   })
 })
 
