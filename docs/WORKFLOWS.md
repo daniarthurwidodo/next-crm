@@ -26,49 +26,49 @@ sequenceDiagram
     participant JWT as JWT Utils<br/>(lib/utils/auth.ts)
     participant Dashboard as Dashboard<br/>(app/dashboard/page.tsx)
 
-    User->>UI: Enter username & password
-    UI->>API: POST /api/login<br/>{username, password}
+    User->>UI: Enter username and password
+    UI->>API: POST /api/login with credentials
     
-    API->>Logger: withLogging(request, handler)
+    API->>Logger: withLogging request handler
     Logger->>Logger: Log request details
     
-    API->>Controller: loginController(username, password)
+    API->>Controller: loginController username password
     
     alt Missing credentials
-        Controller-->>API: {error: "Missing credentials"}<br/>Status 400
+        Controller-->>API: Error Missing credentials<br/>Status 400
         API-->>UI: Error response
         UI-->>User: Show error message
     else Valid input
-        Controller->>Service: loginService(username, password)
+        Controller->>Service: loginService username password
         
-        Note over Service: Transform username to email<br/>If no "@", append "@local.invalid"
-        Service->>Service: email = username.includes("@")<br/>? username<br/>: `${username}@local.invalid`
+        Note over Service: Transform username to email<br/>If no @ symbol append @local.invalid
+        Service->>Service: Convert username to email format
         
-        Service->>Supabase: signInWithPassword({email, password})
+        Service->>Supabase: signInWithPassword with email and password
         
         alt Invalid credentials
             Supabase-->>Service: Authentication failed
-            Service-->>Controller: {error: "Invalid credentials"}<br/>Status 401
+            Service-->>Controller: Error Invalid credentials<br/>Status 401
             Controller-->>API: Error response
             API-->>Logger: Log error
             Logger-->>API: Return logged response
-            API-->>UI: {error: "Invalid credentials"}
+            API-->>UI: Error Invalid credentials
             UI-->>User: Show error message
         else Valid credentials
-            Supabase-->>Service: {data: {user}, error: null}
+            Supabase-->>Service: Success with user data
             
-            Service->>JWT: generateToken(username)
-            Note over JWT: Create JWT with 7-day expiry<br/>Secret: JWT_SECRET<br/>Payload: {username}
-            JWT-->>Service: token (JWT string)
+            Service->>JWT: generateToken username
+            Note over JWT: Create JWT with 7-day expiry<br/>Secret JWT_SECRET<br/>Payload username
+            JWT-->>Service: token string
             
-            Service-->>Controller: {success: true, token}
-            Controller-->>API: {success: true, token}
-            API-->>Logger: Log success (redact token)
+            Service-->>Controller: Success with token
+            Controller-->>API: Success with token
+            API-->>Logger: Log success redact token
             Logger-->>API: Return logged response
-            API-->>UI: {success: true, token}<br/>Status 200
+            API-->>UI: Success with token<br/>Status 200
             
-            UI->>UI: Set cookie: token={token}; path=/;
-            UI->>Dashboard: Navigate to /dashboard
+            UI->>UI: Set cookie with token
+            UI->>Dashboard: Navigate to dashboard
             Dashboard->>Dashboard: Verify JWT from cookie
             Dashboard-->>User: Show dashboard
         end
@@ -76,7 +76,7 @@ sequenceDiagram
 ```
 
 **Key Points:**
-- Username accepts both email format or plain text (converts to `username@local.invalid`)
+- Username accepts both email format or plain text (converts to username@local.invalid)
 - Supabase handles password verification
 - JWT tokens expire after 7 days
 - All requests/responses logged via middleware (sensitive data redacted)
@@ -102,70 +102,70 @@ sequenceDiagram
     participant Email as Email Service<br/>(lib/services/emailService.ts)
     participant Dashboard as Dashboard<br/>(app/dashboard/page.tsx)
 
-    User->>UI: Enter username & password
-    UI->>API: POST /api/register<br/>{username, password}
+    User->>UI: Enter username and password
+    UI->>API: POST /api/register with credentials
     
-    API->>Logger: withLogging(request, handler)
+    API->>Logger: withLogging request handler
     Logger->>Logger: Log request details
     
-    API->>Controller: registerController(username, password)
+    API->>Controller: registerController username password
     
     alt Missing credentials
-        Controller-->>API: {error: "Missing credentials"}<br/>Status 400
+        Controller-->>API: Error Missing credentials<br/>Status 400
         API-->>UI: Error response
         UI-->>User: Show error message
     else Valid input
-        Controller->>Service: registerService(username, password)
+        Controller->>Service: registerService username password
         
-        Note over Service: Transform username to email<br/>If no "@", append "@local.invalid"
-        Service->>Service: email = username.includes("@")<br/>? username<br/>: `${username}@local.invalid`
+        Note over Service: Transform username to email<br/>If no @ symbol append @local.invalid
+        Service->>Service: Convert username to email format
         
-        Service->>Auth: hashPassword(password)
-        Note over Auth: Simple Base64 encoding<br/>(demo only - not production secure)
+        Service->>Auth: hashPassword password
+        Note over Auth: Simple Base64 encoding<br/>demo only not production secure
         Auth-->>Service: passwordHash
         
-        Service->>Supabase: admin.createUser({<br/>  email,<br/>  password,<br/>  email_confirm: true,<br/>  user_metadata: {<br/>    username,<br/>    password_hash,<br/>    created_via: "registration"<br/>  }<br/>})
+        Service->>Supabase: admin.createUser with email password<br/>email_confirm true and user_metadata
         
         alt User already exists
-            Supabase-->>Service: Error: duplicate/unique constraint
-            Service-->>Controller: {error: "User already exists"}<br/>Status 409
+            Supabase-->>Service: Error duplicate unique constraint
+            Service-->>Controller: Error User already exists<br/>Status 409
             Controller-->>API: Error response
             API-->>Logger: Log error
             Logger-->>API: Return logged response
-            API-->>UI: {error: "User already exists"}
+            API-->>UI: Error User already exists
             UI-->>User: Show error message
         else User created successfully
-            Supabase-->>Service: {data: {user}, error: null}
+            Supabase-->>Service: Success with user data
             
-            Service->>JWT: generateToken(username)
-            Note over JWT: Create JWT with 7-day expiry<br/>Secret: JWT_SECRET<br/>Payload: {username}
-            JWT-->>Service: token (JWT string)
+            Service->>JWT: generateToken username
+            Note over JWT: Create JWT with 7-day expiry<br/>Secret JWT_SECRET Payload username
+            JWT-->>Service: token string
             
-            Note over Service: Send welcome email (non-blocking)<br/>Failures don't block registration
-            Service->>Email: sendWelcomeEmail(email, username)
+            Note over Service: Send welcome email non-blocking<br/>Failures do not block registration
+            Service->>Email: sendWelcomeEmail with email username
             Email->>Email: Create SMTP transport<br/>Retry up to 3 attempts
-            Email-->>Service: (async, no wait)
+            Email-->>Service: async no wait
             
-            Service-->>Controller: {success: true, token}
-            Controller-->>API: {success: true, token}<br/>Status 201
-            API-->>Logger: Log success (redact token)
+            Service-->>Controller: Success with token
+            Controller-->>API: Success with token Status 201
+            API-->>Logger: Log success redact token
             Logger-->>API: Return logged response
-            API-->>UI: {success: true, token}
+            API-->>UI: Success with token
             
-            UI->>UI: Set cookie: token={token}; path=/;
-            UI->>Dashboard: Navigate to /dashboard
+            UI->>UI: Set cookie with token
+            UI->>Dashboard: Navigate to dashboard
             Dashboard->>Dashboard: Verify JWT from cookie
             Dashboard-->>User: Show dashboard
         end
     end
     
-    Note over Email,User: Email sent asynchronously<br/>(may arrive after redirect)
+    Note over Email,User: Email sent asynchronously may arrive after redirect
 ```
 
 **Key Points:**
-- Auto-confirms email (`email_confirm: true`) - no verification required
+- Auto-confirms email (email_confirm true) - no verification required
 - Password stored securely by Supabase, hash in metadata is for demo
-- Welcome email failures don't block registration (`.catch()` handler)
+- Welcome email failures do not block registration (catch handler)
 - No subscription record created - registration and subscriptions are decoupled
 - User can register and access dashboard without subscribing
 
@@ -191,32 +191,32 @@ sequenceDiagram
     User->>Landing: Visit homepage
     Landing->>Pricing: Render pricing tiers
     
-    Note over Pricing,Plans: Plans: free (price_1Sy...), pro (price_1Sy...)
+    Note over Pricing,Plans: Plans free and pro with Stripe price IDs
     
-    User->>Pricing: Click "Go Pro" or "Start for Free"
-    Pricing->>Checkout: Navigate to /checkout/{plan}
+    User->>Pricing: Click Go Pro or Start for Free
+    Pricing->>Checkout: Navigate to checkout with plan
     
     Note over Checkout: Auto-execute on mount
-    Checkout->>API: POST /api/stripe/create-checkout-session<br/>{plan: "free" | "pro"}
+    Checkout->>API: POST create-checkout-session<br/>with plan free or pro
     
     API->>Plans: Validate plan exists in plans object
     
     alt Invalid plan
-        API-->>Checkout: {error: "Invalid plan"}<br/>Status 400
+        API-->>Checkout: Error Invalid plan Status 400
         Checkout-->>User: Show error message
     else Valid plan
-        API->>Stripe: stripe.checkout.sessions.create({<br/>  payment_method_types: ["card"],<br/>  mode: "subscription",<br/>  line_items: [{<br/>    price: selectedPlan.priceId,<br/>    quantity: 1<br/>  }],<br/>  metadata: { plan },<br/>  allow_promotion_codes: true,<br/>  success_url: "/dashboard?session_id={CHECKOUT_SESSION_ID}",<br/>  cancel_url: "/pricing"<br/>})
+        API->>Stripe: stripe.checkout.sessions.create<br/>payment methods card mode subscription<br/>line items with price and quantity<br/>metadata with plan allow promo codes<br/>success and cancel URLs
         
-        Stripe-->>API: {id: "cs_...", url: "https://checkout.stripe.com/..."}
-        API-->>Checkout: {url: session.url}<br/>Status 200
+        Stripe-->>API: session with id and url
+        API-->>Checkout: session url Status 200
         
-        Checkout->>StripePage: window.location.href = session.url
+        Checkout->>StripePage: Redirect to Stripe checkout
         StripePage-->>User: Show Stripe checkout form
         
-        User->>StripePage: Enter email & payment details
+        User->>StripePage: Enter email and payment details
         User->>StripePage: Complete payment
         
-        Note over StripePage,Stripe: Stripe processes payment<br/>Creates customer & subscription
+        Note over StripePage,Stripe: Stripe processes payment creates customer and subscription
     end
 ```
 
@@ -233,53 +233,53 @@ sequenceDiagram
     participant Email as Email Service<br/>(lib/services/emailService.ts)
     participant User as User Browser
 
-    Stripe->>Webhook: POST /api/webhooks/stripe<br/>Event: checkout.session.completed
+    Stripe->>Webhook: POST webhooks stripe<br/>Event checkout session completed
     
-    Note over Webhook: Verify webhook signature<br/>using STRIPE_WEBHOOK_SECRET
+    Note over Webhook: Verify webhook signature using STRIPE WEBHOOK SECRET
     
-    Webhook->>Webhook: stripe.webhooks.constructEvent(<br/>  body, signature, secret<br/>)
+    Webhook->>Webhook: stripe webhooks constructEvent with body signature secret
     
     alt Invalid signature
-        Webhook-->>Stripe: Status 400 (Invalid signature)
+        Webhook-->>Stripe: Status 400 Invalid signature
     else Valid signature
-        Webhook->>Service: handleCheckoutCompleted(session)
+        Webhook->>Service: handleCheckoutCompleted session
         
-        Service->>Service: Extract data:<br/>- customer_email<br/>- stripeCustomerId (cus_...)<br/>- stripeSubscriptionId (sub_...)<br/>- plan from metadata
+        Service->>Service: Extract customer email<br/>stripeCustomerId stripeSubscriptionId<br/>plan from metadata
         
-        Service->>Supabase: auth.admin.listUsers()
+        Service->>Supabase: auth admin listUsers
         Service->>Service: Filter users by email
         
         alt User exists
             Note over Service: Link subscription to existing user
         else User does NOT exist
-            Service->>Supabase: auth.admin.createUser({<br/>  email: customer_email,<br/>  email_confirm: true,<br/>  user_metadata: {<br/>    created_via: "stripe_checkout",<br/>    stripe_customer_id: stripeCustomerId<br/>  }<br/>})
-            Supabase-->>Service: {data: {user: {id: userId}}}
+            Service->>Supabase: auth admin createUser<br/>with email email_confirm true<br/>user_metadata with stripe info
+            Supabase-->>Service: success with user id
         end
         
-        Service->>Service: Extract subscription details:<br/>- status: "active"<br/>- currentPeriodEnd<br/>- planName
+        Service->>Service: Extract subscription details<br/>status active currentPeriodEnd planName
         
-        Service->>Repo: createSubscription({<br/>  userId,<br/>  stripeCustomerId,<br/>  stripeSubscriptionId,<br/>  subscriptionStatus: "active",<br/>  planName,<br/>  currentPeriodEnd<br/>})
+        Service->>Repo: createSubscription with<br/>userId stripeCustomerId<br/>stripeSubscriptionId<br/>subscriptionStatus active<br/>planName currentPeriodEnd
         
-        Repo->>DB: INSERT INTO user_subscriptions<br/>ON CONFLICT (stripe_customer_id)<br/>DO UPDATE SET ...<br/>(upsert to prevent duplicates)
+        Repo->>DB: INSERT INTO user_subscriptions<br/>ON CONFLICT stripe_customer_id<br/>DO UPDATE SET fields<br/>upsert to prevent duplicates
         
-        DB-->>Repo: Subscription created/updated
+        DB-->>Repo: Subscription created or updated
         Repo-->>Service: Success
         
-        Note over Service: Send emails (non-blocking)<br/>Failures don't block webhook
+        Note over Service: Send emails non-blocking<br/>Failures do not block webhook
         
-        Service->>Email: sendWelcomeEmail(email, username)<br/>(if new user)
-        Service->>Email: sendSubscriptionConfirmed(email, planName, amount)
+        Service->>Email: sendWelcomeEmail if new user
+        Service->>Email: sendSubscriptionConfirmed email
         
         Email->>Email: Send via SMTP with retry logic
-        Email-->>Service: (async, no wait)
+        Email-->>Service: async no wait
         
-        Service-->>Webhook: Success (200)
+        Service-->>Webhook: Success 200
         Webhook-->>Stripe: Status 200
     end
     
-    Note over Stripe,User: User redirected to:<br/>/dashboard?session_id={CHECKOUT_SESSION_ID}
+    Note over Stripe,User: User redirected to dashboard with session_id parameter
     
-    Stripe->>User: Redirect to success_url
+    Stripe->>User: Redirect to success url
 ```
 
 ### Part C: Subscription Lifecycle Events
@@ -293,90 +293,90 @@ sequenceDiagram
     participant DB as PostgreSQL<br/>(user_subscriptions)
     participant Email as Email Service<br/>(lib/services/emailService.ts)
 
-    Note over Stripe,Email: Event: customer.subscription.updated
+    Note over Stripe,Email: Event customer subscription updated
 
-    Stripe->>Webhook: POST /api/webhooks/stripe<br/>Event: customer.subscription.updated
+    Stripe->>Webhook: POST webhooks stripe<br/>Event customer subscription updated
     Webhook->>Webhook: Verify signature
-    Webhook->>Service: handleSubscriptionUpdated(subscription)
+    Webhook->>Service: handleSubscriptionUpdated subscription
     
-    Service->>Repo: subscriptionExists(stripeCustomerId)
-    Repo->>DB: SELECT FROM user_subscriptions<br/>WHERE stripe_customer_id = $1
+    Service->>Repo: subscriptionExists stripeCustomerId
+    Repo->>DB: SELECT FROM user_subscriptions<br/>WHERE stripe_customer_id matches
     DB-->>Repo: Subscription record or null
-    Repo-->>Service: exists: boolean
+    Repo-->>Service: exists boolean
     
     alt Subscription not found
-        Service-->>Webhook: Log warning, return 200
+        Service-->>Webhook: Log warning return 200
     else Subscription exists
-        Service->>Service: Extract plan name from<br/>subscription.items.data[0].price.nickname
+        Service->>Service: Extract plan name from<br/>subscription items data price nickname
         
-        Service->>Repo: updateSubscription(stripeCustomerId, {<br/>  subscriptionStatus,<br/>  planName,<br/>  currentPeriodEnd,<br/>  stripeSubscriptionId<br/>})
+        Service->>Repo: updateSubscription stripeCustomerId<br/>with subscriptionStatus planName<br/>currentPeriodEnd stripeSubscriptionId
         
-        Repo->>DB: UPDATE user_subscriptions<br/>SET ..., updated_at = NOW()<br/>WHERE stripe_customer_id = $1
+        Repo->>DB: UPDATE user_subscriptions SET fields<br/>and updated_at NOW<br/>WHERE stripe_customer_id matches
         DB-->>Repo: Updated
         Repo-->>Service: Success
         
-        alt Status changed to "active"
-            Service->>Email: sendSubscriptionConfirmed(email, planName, amount)
-            Email-->>Service: (async, no wait)
+        alt Status changed to active
+            Service->>Email: sendSubscriptionConfirmed email
+            Email-->>Service: async no wait
         end
         
-        Service-->>Webhook: Success (200)
+        Service-->>Webhook: Success 200
     end
     Webhook-->>Stripe: Status 200
 
-    Note over Stripe,Email: Event: customer.subscription.deleted
+    Note over Stripe,Email: Event customer subscription deleted
 
-    Stripe->>Webhook: POST /api/webhooks/stripe<br/>Event: customer.subscription.deleted
+    Stripe->>Webhook: POST webhooks stripe<br/>Event customer subscription deleted
     Webhook->>Webhook: Verify signature
-    Webhook->>Service: handleSubscriptionDeleted(subscription)
+    Webhook->>Service: handleSubscriptionDeleted subscription
     
-    Service->>Repo: subscriptionExists(stripeCustomerId)
+    Service->>Repo: subscriptionExists stripeCustomerId
     Repo->>DB: SELECT FROM user_subscriptions
     DB-->>Repo: Subscription record
-    Repo-->>Service: exists: true
+    Repo-->>Service: exists true
     
-    Service->>Repo: updateSubscription(stripeCustomerId, {<br/>  subscriptionStatus: "canceled"<br/>})
+    Service->>Repo: updateSubscription with<br/>subscriptionStatus canceled
     
-    Repo->>DB: UPDATE user_subscriptions<br/>SET subscription_status = 'canceled'
+    Repo->>DB: UPDATE user_subscriptions<br/>SET subscription_status canceled
     DB-->>Repo: Updated
     Repo-->>Service: Success
     
-    Service->>Email: sendSubscriptionCancelled(email, planName, endDate)
-    Email-->>Service: (async, no wait)
+    Service->>Email: sendSubscriptionCancelled email
+    Email-->>Service: async no wait
     
-    Service-->>Webhook: Success (200)
+    Service-->>Webhook: Success 200
     Webhook-->>Stripe: Status 200
 
-    Note over Stripe,Email: Event: invoice.payment_failed
+    Note over Stripe,Email: Event invoice payment failed
 
-    Stripe->>Webhook: POST /api/webhooks/stripe<br/>Event: invoice.payment_failed
+    Stripe->>Webhook: POST webhooks stripe<br/>Event invoice payment failed
     Webhook->>Webhook: Verify signature
-    Webhook->>Service: handlePaymentFailed(invoice)
+    Webhook->>Service: handlePaymentFailed invoice
     
-    Service->>Repo: subscriptionExists(stripeCustomerId)
+    Service->>Repo: subscriptionExists stripeCustomerId
     Repo->>DB: SELECT FROM user_subscriptions
     DB-->>Repo: Subscription record
-    Repo-->>Service: exists: true
+    Repo-->>Service: exists true
     
-    Service->>Repo: updateSubscription(stripeCustomerId, {<br/>  subscriptionStatus: "past_due"<br/>})
+    Service->>Repo: updateSubscription stripeCustomerId<br/>with subscriptionStatus past_due
     
-    Repo->>DB: UPDATE user_subscriptions<br/>SET subscription_status = 'past_due'
+    Repo->>DB: UPDATE user_subscriptions<br/>SET subscription_status past_due
     DB-->>Repo: Updated
     Repo-->>Service: Success
     
-    Service->>Email: sendPaymentFailed(email, planName, retryDate)
-    Email-->>Service: (async, no wait)
+    Service->>Email: sendPaymentFailed email
+    Email-->>Service: async no wait
     
-    Service-->>Webhook: Success (200)
+    Service-->>Webhook: Success 200
     Webhook-->>Stripe: Status 200
 ```
 
 **Key Points:**
 - **Decoupled Architecture:** Registration and subscriptions are independent
 - **Email Matching:** Stripe checkout email links subscriptions to existing users
-- **User Creation:** New users auto-created during checkout if email doesn't exist
-- **Upsert Logic:** Prevents duplicate subscriptions (by `stripe_customer_id`)
-- **Non-Blocking Emails:** All email operations use `.catch()` - never fail webhooks
+- **User Creation:** New users auto-created during checkout if email does not exist
+- **Upsert Logic:** Prevents duplicate subscriptions by stripe_customer_id
+- **Non-Blocking Emails:** All email operations use catch handlers never fail webhooks
 - **Webhook Idempotency:** Safe to replay events (upserts and last-write-wins updates)
 - **Status Transitions:** active → past_due (payment failed) → canceled
 - **No Auth Check:** Dashboard currently doesn't verify subscription status (gap)
@@ -386,13 +386,13 @@ sequenceDiagram
 ## Integration Summary
 
 ### Authentication Flow
-- **Storage:** Supabase Auth (`auth.users` table)
-- **Session:** JWT tokens (7-day expiry, stored in cookies)
-- **Verification:** `verifyJWT()` in dashboard pages
+- **Storage:** Supabase Auth (auth.users table)
+- **Session:** JWT tokens (7-day expiry stored in cookies)
+- **Verification:** verifyJWT in dashboard pages
 
 ### Subscription Flow
 - **Payment:** Stripe Checkout (subscription mode)
-- **Storage:** PostgreSQL `user_subscriptions` table (via repository pattern)
+- **Storage:** PostgreSQL user_subscriptions table (via repository pattern)
 - **Events:** Real-time webhooks for lifecycle management
 - **Linking:** Email-based matching between Stripe and Supabase users
 
