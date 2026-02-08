@@ -1,33 +1,45 @@
 "use client";
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Button } from '@/components/ui/button';
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { authClient } from "@/lib/auth-client";
 
 export default function RegisterPage() {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
 
   async function handleRegister(e: React.FormEvent) {
     e.preventDefault();
-    setError('');
+    setError("");
+    setLoading(true);
     try {
-      const resp = await fetch('/api/register', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
-      })
-      const data = await resp.json()
-      if (resp.ok && data.token) {
-        document.cookie = `token=${data.token}; path=/;`;
-        router.push('/dashboard');
+      const { error: authError } = await authClient.signUp.email({
+        name,
+        email,
+        password,
+      });
+      if (authError) {
+        setError(authError.message || "Registration failed");
       } else {
-        setError(data.error || 'Registration failed')
+        router.push("/dashboard");
       }
-    } catch (err: any) {
-      setError(err?.message || 'Registration failed')
+    } catch {
+      setError("Registration failed");
+    } finally {
+      setLoading(false);
     }
+  }
+
+  async function handleGoogleSignIn() {
+    setError("");
+    await authClient.signIn.social({
+      provider: "google",
+      callbackURL: "/dashboard",
+    });
   }
 
   return (
@@ -37,9 +49,17 @@ export default function RegisterPage() {
         <input
           className="w-full border px-3 py-2 rounded"
           type="text"
-          placeholder="Username"
-          value={username}
-          onChange={e => setUsername(e.target.value)}
+          placeholder="Name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          required
+        />
+        <input
+          className="w-full border px-3 py-2 rounded"
+          type="email"
+          placeholder="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
           required
         />
         <input
@@ -47,14 +67,38 @@ export default function RegisterPage() {
           type="password"
           placeholder="Password"
           value={password}
-          onChange={e => setPassword(e.target.value)}
+          onChange={(e) => setPassword(e.target.value)}
           required
         />
         {error && <div className="text-red-500">{error}</div>}
-        <Button type="submit" className="w-full">Register</Button>
+        <Button type="submit" className="w-full" disabled={loading}>
+          {loading ? "Creating account..." : "Register"}
+        </Button>
       </form>
+
+      <div className="relative my-6">
+        <div className="absolute inset-0 flex items-center">
+          <span className="w-full border-t" />
+        </div>
+        <div className="relative flex justify-center text-xs uppercase">
+          <span className="bg-background px-2 text-muted-foreground">Or</span>
+        </div>
+      </div>
+
+      <Button
+        type="button"
+        variant="outline"
+        className="w-full"
+        onClick={handleGoogleSignIn}
+      >
+        Sign up with Google
+      </Button>
+
       <p className="mt-4 text-center text-sm">
-        Already have an account? <a href="/dashboard/login" className="underline">Login</a>
+        Already have an account?{" "}
+        <a href="/dashboard/login" className="underline">
+          Login
+        </a>
       </p>
     </main>
   );

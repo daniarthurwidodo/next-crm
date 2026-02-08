@@ -1,28 +1,32 @@
-import { ReactNode } from 'react';
-import { cookies } from 'next/headers';
-import { redirect } from 'next/navigation';
-import { verifyJWT } from '@/lib/utils/auth';
-import { Sidebar } from '@/components/ui/sidebar';
-import '../dashboard.css';
+import { ReactNode } from "react";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
+import { auth } from "@/lib/auth";
+import { Sidebar } from "@/components/ui/sidebar";
+import "../dashboard.css";
 
-export default async function ProtectedDashboardLayout({ children }: { children: ReactNode }) {
-  const cookieStore = await cookies();
-  const token = cookieStore.get('token')?.value;
-  const auth = token ? verifyJWT(token) : { valid: false };
+export default async function ProtectedDashboardLayout({
+  children,
+}: {
+  children: ReactNode;
+}) {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
 
-  if (!auth.valid) {
-    redirect('/dashboard/login');
+  if (!session) {
+    redirect("/dashboard/login");
   }
 
-  const username = auth.username || 'Unknown';
+  const username = session.user.name || session.user.email;
 
   return (
     <div className="dashboard-container">
       <Sidebar
         username={username}
         menuItems={[
-          { label: 'Dashboard', href: '/dashboard' },
-          { label: 'Users', href: '/dashboard/users' }
+          { label: "Dashboard", href: "/dashboard" },
+          { label: "Users", href: "/dashboard/users" },
         ]}
       />
       <main className="dashboard-main">

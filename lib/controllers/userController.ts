@@ -1,52 +1,71 @@
-import { createClient } from '@/lib/supabase/server';
+import { db } from "@/lib/db";
+import { user, userSubscriptions } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
 
 export async function getUsers() {
-  try {
-    const supabase = await createClient();
-    const { data, error } = await supabase.from('users').select('*');
-    if (error) {
-      // Supabase errors are objects, serialize them properly
-      const errorDetails = JSON.stringify(error, null, 2);
-      throw new Error(`Supabase query error: ${errorDetails}`);
-    }
-    return data ?? [];
-  } catch (err) {
-    if (err instanceof Error) {
-      throw err; // Re-throw if already an Error
-    }
-    // Handle non-Error objects
-    const msg = typeof err === 'object' ? JSON.stringify(err) : String(err);
-    throw new Error(`getUsers failed: ${msg}`);
-  }
+  const rows = await db
+    .select({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      emailVerified: user.emailVerified,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+      plan: userSubscriptions.planName,
+      subscriptionStatus: userSubscriptions.subscriptionStatus,
+      stripeCustomerId: userSubscriptions.stripeCustomerId,
+      stripeSubscriptionId: userSubscriptions.stripeSubscriptionId,
+      currentPeriodEnd: userSubscriptions.currentPeriodEnd,
+    })
+    .from(user)
+    .leftJoin(userSubscriptions, eq(user.id, userSubscriptions.userId));
+
+  return rows.map((row) => ({
+    ...row,
+    plan: row.plan ?? "free",
+  }));
 }
 
 export async function getUserById(id: string) {
-  const supabase = await createClient();
-  const { data, error } = await supabase.from('users').select('*').eq('id', id).single();
-  if (error) {
-    if ((error as any).code === 'PGRST116') return null;
-    throw error;
-  }
-  return data;
+  const rows = await db
+    .select()
+    .from(user)
+    .where(eq(user.id, id))
+    .limit(1);
+
+  return rows[0] ?? null;
 }
 
-export async function createUser(user: any) {
-  const supabase = await createClient();
-  const { data, error } = await supabase.from('users').insert([user]).select('*');
-  if (error) throw error;
-  return data[0];
+export async function createUser(data: {
+  name: string;
+  email: string;
+}) {
+  const rows = await db
+    .insert(user)
+    .values({
+      id: crypto.randomUUID(),
+      name: data.name,
+      email: data.email,
+    })
+    .returning();
+
+  return rows[0];
 }
 
-export async function updateUser(id: string, user: any) {
-  const supabase = await createClient();
-  const { data, error } = await supabase.from('users').update(user).eq('id', id).select('*');
-  if (error) throw error;
-  return data[0];
+export async function updateUser(
+  id: string,
+  data: Partial<{ name: string; email: string }>
+) {
+  const rows = await db
+    .update(user)
+    .set({ ...data, updatedAt: new Date() })
+    .where(eq(user.id, id))
+    .returning();
+
+  return rows[0];
 }
 
 export async function deleteUser(id: string) {
-  const supabase = await createClient();
-  const { error } = await supabase.from('users').delete().eq('id', id);
-  if (error) throw error;
+  await db.delete(user).where(eq(user.id, id));
   return true;
 }

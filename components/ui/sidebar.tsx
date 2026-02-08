@@ -1,8 +1,9 @@
-'use client';
+"use client";
 
-import React from 'react';
-import { useRouter } from 'next/navigation';
-import './sidebar.css';
+import React from "react";
+import { useRouter } from "next/navigation";
+import { authClient } from "@/lib/auth-client";
+import "./sidebar.css";
 
 interface SidebarItem {
   label: string;
@@ -19,22 +20,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ username, menuItems = [] }) =>
 
   const handleLogout = async () => {
     try {
-      const response = await fetch('/api/logout', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (response.ok) {
-        router.push('/dashboard/login');
-      } else {
-        console.error('Logout failed');
-      }
+      await authClient.signOut();
+      router.push("/dashboard/login");
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error("Logout error:", error);
     }
   };
+
   return (
     <aside className="sidebar">
       <div className="sidebar-user">
@@ -46,7 +38,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ username, menuItems = [] }) =>
           <button
             key={idx}
             className="sidebar-menu-item"
-            onClick={() => item.href ? router.push(item.href) : undefined}
+            onClick={() => (item.href ? router.push(item.href) : undefined)}
           >
             {item.label}
           </button>

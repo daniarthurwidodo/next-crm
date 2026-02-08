@@ -1,4 +1,6 @@
-import pool from "../db";
+import { db } from "@/lib/db";
+import { userSubscriptions } from "@/lib/db/schema";
+import { eq, sql } from "drizzle-orm";
 import { createLogger } from "../logger";
 
 const logger = createLogger({ module: "subscription-repository" });
@@ -20,29 +22,37 @@ export interface UpdateSubscriptionData {
 }
 
 /**
- * Create a new subscription record
+ * Create a new subscription record (upsert on stripe_customer_id)
  */
 export async function createSubscription(data: SubscriptionData): Promise<void> {
-  const { userId, stripeCustomerId, stripeSubscriptionId, subscriptionStatus, planName, currentPeriodEnd } = data;
-
   try {
-    await pool.query(
-      `INSERT INTO user_subscriptions 
-        (user_id, stripe_customer_id, stripe_subscription_id, subscription_status, plan_name, current_period_end)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       ON CONFLICT (stripe_customer_id) 
-       DO UPDATE SET 
-         stripe_subscription_id = EXCLUDED.stripe_subscription_id,
-         subscription_status = EXCLUDED.subscription_status,
-         plan_name = EXCLUDED.plan_name,
-         current_period_end = EXCLUDED.current_period_end,
-         updated_at = NOW()`,
-      [userId, stripeCustomerId, stripeSubscriptionId, subscriptionStatus, planName, currentPeriodEnd]
+    await db
+      .insert(userSubscriptions)
+      .values({
+        userId: data.userId,
+        stripeCustomerId: data.stripeCustomerId,
+        stripeSubscriptionId: data.stripeSubscriptionId,
+        subscriptionStatus: data.subscriptionStatus,
+        planName: data.planName,
+        currentPeriodEnd: data.currentPeriodEnd,
+      })
+      .onConflictDoUpdate({
+        target: userSubscriptions.stripeCustomerId,
+        set: {
+          stripeSubscriptionId: data.stripeSubscriptionId,
+          subscriptionStatus: data.subscriptionStatus,
+          planName: data.planName,
+          currentPeriodEnd: data.currentPeriodEnd,
+          updatedAt: sql`now()`,
+        },
+      });
+
+    logger.info(
+      { userId: data.userId, stripeCustomerId: data.stripeCustomerId, subscriptionStatus: data.subscriptionStatus },
+      "Subscription created/updated"
     );
-    
-    logger.info({ userId, stripeCustomerId, subscriptionStatus }, "Subscription created/updated");
   } catch (error) {
-    logger.error({ error, userId, stripeCustomerId }, "Failed to create subscription");
+    logger.error({ error, userId: data.userId, stripeCustomerId: data.stripeCustomerId }, "Failed to create subscription");
     throw error;
   }
 }
@@ -54,44 +64,21 @@ export async function updateSubscription(
   stripeCustomerId: string,
   data: UpdateSubscriptionData
 ): Promise<void> {
-  const updateFields: string[] = [];
-  const values: (string | Date)[] = [];
-  let paramCount = 1;
+  const updates: Record<string, unknown> = { updatedAt: sql`now()` };
 
-  if (data.subscriptionStatus !== undefined) {
-    updateFields.push(`subscription_status = $${paramCount++}`);
-    values.push(data.subscriptionStatus);
-  }
+  if (data.subscriptionStatus !== undefined) updates.subscriptionStatus = data.subscriptionStatus;
+  if (data.planName !== undefined) updates.planName = data.planName;
+  if (data.currentPeriodEnd !== undefined) updates.currentPeriodEnd = data.currentPeriodEnd;
+  if (data.stripeSubscriptionId !== undefined) updates.stripeSubscriptionId = data.stripeSubscriptionId;
 
-  if (data.planName !== undefined) {
-    updateFields.push(`plan_name = $${paramCount++}`);
-    values.push(data.planName);
-  }
-
-  if (data.currentPeriodEnd !== undefined) {
-    updateFields.push(`current_period_end = $${paramCount++}`);
-    values.push(data.currentPeriodEnd);
-  }
-
-  if (data.stripeSubscriptionId !== undefined) {
-    updateFields.push(`stripe_subscription_id = $${paramCount++}`);
-    values.push(data.stripeSubscriptionId);
-  }
-
-  if (updateFields.length === 0) {
-    return;
-  }
-
-  updateFields.push(`updated_at = NOW()`);
-  values.push(stripeCustomerId);
+  // Only updatedAt -- nothing to do
+  if (Object.keys(updates).length <= 1) return;
 
   try {
-    await pool.query(
-      `UPDATE user_subscriptions 
-       SET ${updateFields.join(", ")}
-       WHERE stripe_customer_id = $${paramCount}`,
-      values
-    );
+    await db
+      .update(userSubscriptions)
+      .set(updates)
+      .where(eq(userSubscriptions.stripeCustomerId, stripeCustomerId));
 
     logger.info({ stripeCustomerId, updates: data }, "Subscription updated");
   } catch (error) {
@@ -105,12 +92,13 @@ export async function updateSubscription(
  */
 export async function getSubscriptionByCustomerId(stripeCustomerId: string) {
   try {
-    const result = await pool.query(
-      `SELECT * FROM user_subscriptions WHERE stripe_customer_id = $1`,
-      [stripeCustomerId]
-    );
+    const rows = await db
+      .select()
+      .from(userSubscriptions)
+      .where(eq(userSubscriptions.stripeCustomerId, stripeCustomerId))
+      .limit(1);
 
-    return result.rows[0] || null;
+    return rows[0] ?? null;
   } catch (error) {
     logger.error({ error, stripeCustomerId }, "Failed to get subscription by customer ID");
     throw error;
@@ -122,12 +110,14 @@ export async function getSubscriptionByCustomerId(stripeCustomerId: string) {
  */
 export async function getSubscriptionByUserId(userId: string) {
   try {
-    const result = await pool.query(
-      `SELECT * FROM user_subscriptions WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1`,
-      [userId]
-    );
+    const rows = await db
+      .select()
+      .from(userSubscriptions)
+      .where(eq(userSubscriptions.userId, userId))
+      .orderBy(sql`${userSubscriptions.createdAt} desc`)
+      .limit(1);
 
-    return result.rows[0] || null;
+    return rows[0] ?? null;
   } catch (error) {
     logger.error({ error, userId }, "Failed to get subscription by user ID");
     throw error;
@@ -139,12 +129,13 @@ export async function getSubscriptionByUserId(userId: string) {
  */
 export async function subscriptionExists(stripeCustomerId: string): Promise<boolean> {
   try {
-    const result = await pool.query(
-      `SELECT 1 FROM user_subscriptions WHERE stripe_customer_id = $1 LIMIT 1`,
-      [stripeCustomerId]
-    );
+    const rows = await db
+      .select({ id: userSubscriptions.id })
+      .from(userSubscriptions)
+      .where(eq(userSubscriptions.stripeCustomerId, stripeCustomerId))
+      .limit(1);
 
-    return result.rows.length > 0;
+    return rows.length > 0;
   } catch (error) {
     logger.error({ error, stripeCustomerId }, "Failed to check subscription existence");
     throw error;
@@ -156,12 +147,13 @@ export async function subscriptionExists(stripeCustomerId: string): Promise<bool
  */
 export async function getSubscriptionStatus(stripeCustomerId: string): Promise<string | null> {
   try {
-    const result = await pool.query(
-      `SELECT subscription_status FROM user_subscriptions WHERE stripe_customer_id = $1`,
-      [stripeCustomerId]
-    );
+    const rows = await db
+      .select({ subscriptionStatus: userSubscriptions.subscriptionStatus })
+      .from(userSubscriptions)
+      .where(eq(userSubscriptions.stripeCustomerId, stripeCustomerId))
+      .limit(1);
 
-    return result.rows[0]?.subscription_status || null;
+    return rows[0]?.subscriptionStatus ?? null;
   } catch (error) {
     logger.error({ error, stripeCustomerId }, "Failed to get subscription status");
     throw error;
