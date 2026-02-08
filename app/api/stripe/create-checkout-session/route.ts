@@ -29,6 +29,14 @@ export async function POST(request: NextRequest) {
         payment_method_types: ["card"],
         mode: "subscription",
         line_items: [{ price: selectedPlan.priceId, quantity: 1 }],
+        // Allow Stripe to collect customer email for webhook processing
+        customer_email: undefined, // Let Stripe's form collect the email
+        // Add metadata to track which plan was selected
+        metadata: {
+          plan: plan,
+        },
+        // Allow promotion codes for discounts
+        allow_promotion_codes: true,
         // Use environment variables or fallback URLs for success/cancel
         success_url: `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/dashboard?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/pricing`,
