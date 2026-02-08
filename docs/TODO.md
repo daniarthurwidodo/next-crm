@@ -5,11 +5,16 @@
 - Supabase integration for auth and user management
 - API routes: `/api/login`, `/api/register` (tests present in `tests/api`)
 - Playwright e2e test fixtures and basic e2e tests for login/register
+- Email notifications system with nodemailer and Mailtrap
+  - Welcome emails on registration
+  - Upload notifications (service ready for upload feature)
+  - Subscription lifecycle emails (confirmation, payment failed, cancellation)
+  - Password reset functionality with email notifications
 
 ## In Progress
 - Dashboard UX refinements
 - Billing / Stripe integration (Pro tier)
-- Email notifications on upload
+- Upload feature implementation (email notification ready)
 
 ## Needs Improvement
 - Tests: increase unit coverage for services (`lib/services`) and controllers

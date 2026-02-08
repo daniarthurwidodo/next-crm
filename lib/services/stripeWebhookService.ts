@@ -2,6 +2,12 @@ import Stripe from "stripe";
 import { SupabaseClient } from "@supabase/supabase-js";
 import supabaseService from "../supabase/service";
 import { createLogger } from "../logger";
+import {
+  sendWelcomeEmail,
+  sendSubscriptionConfirmed,
+  sendPaymentFailed,
+  sendSubscriptionCancelled,
+} from "./emailService";
 
 const logger = createLogger({ module: "stripe-webhook-service" });
 import * as subscriptionRepo from "../repositories/subscriptionRepository";
@@ -79,10 +85,18 @@ export async function handleCheckoutCompleted(session: Stripe.Checkout.Session) 
         : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // Default 30 days from now
     });
 
-    // Send password setup link for new users
+    // Send welcome email for new users (non-blocking)
     if (isNewUser) {
-      await sendPasswordSetupEmail(email);
+      sendWelcomeEmail(email, email.split('@')[0]).catch((error) => {
+        logger.error({ email, error }, 'Failed to send welcome email');
+      });
     }
+
+    // Send subscription confirmation email (non-blocking)
+    const amount = session.amount_total || 0;
+    sendSubscriptionConfirmed(email, planName, amount).catch((error) => {
+      logger.error({ email, error }, 'Failed to send subscription confirmation');
+    });
 
     logger.info(
       { userId, email, stripeCustomerId, planName, isNewUser },
@@ -131,6 +145,18 @@ export async function handleSubscriptionUpdated(subscription: Stripe.Subscriptio
       stripeSubscriptionId: subscription.id,
     });
 
+    // Send email notification for subscription changes (upgrade/downgrade)
+    const previousStatus = await subscriptionRepo.getSubscriptionStatus(stripeCustomerId);
+    if (previousStatus && previousStatus !== status && status === 'active') {
+      const userEmail = await getUserEmailByCustomerId(stripeCustomerId);
+      if (userEmail) {
+        const amount = subscription.items.data[0]?.price.unit_amount || 0;
+        sendSubscriptionConfirmed(userEmail, planName, amount).catch((error) => {
+          logger.error({ userEmail, error }, 'Failed to send subscription update email');
+        });
+      }
+    }
+
     logger.info(
       { stripeCustomerId, status, planName },
       "Subscription updated successfully"
@@ -171,6 +197,16 @@ export async function handleSubscriptionDeleted(subscription: Stripe.Subscriptio
       subscriptionStatus: "canceled",
     });
 
+    // Send cancellation confirmation email (non-blocking)
+    const userEmail = await getUserEmailByCustomerId(stripeCustomerId);
+    if (userEmail) {
+      const planName = subscription.items.data[0]?.price.nickname || "unknown";
+      const endDate = new Date((subscription as Stripe.Subscription & { current_period_end: number }).current_period_end * 1000);
+      sendSubscriptionCancelled(userEmail, planName, endDate).catch((error) => {
+        logger.error({ userEmail, error }, 'Failed to send cancellation email');
+      });
+    }
+
     logger.info({ stripeCustomerId }, "Subscription marked as canceled");
   } catch (error) {
     logger.error(
@@ -208,6 +244,18 @@ export async function handlePaymentFailed(invoice: Stripe.Invoice) {
       subscriptionStatus: "past_due",
     });
 
+    // Send payment failure notification (non-blocking)
+    const userEmail = await getUserEmailByCustomerId(stripeCustomerId);
+    if (userEmail) {
+      const planName = invoice.lines.data[0]?.description || "your subscription";
+      const retryDate = invoice.next_payment_attempt 
+        ? new Date(invoice.next_payment_attempt * 1000) 
+        : new Date(Date.now() + 3 * 24 * 60 * 60 * 1000); // Default 3 days
+      sendPaymentFailed(userEmail, planName, retryDate).catch((error) => {
+        logger.error({ userEmail, error }, 'Failed to send payment failure email');
+      });
+    }
+
     logger.info({ stripeCustomerId }, "Subscription marked as past_due");
   } catch (error) {
     logger.error(
@@ -219,30 +267,26 @@ export async function handlePaymentFailed(invoice: Stripe.Invoice) {
 }
 
 /**
- * Send password setup email using Supabase recovery link
+ * Get user email by Stripe customer ID
  */
-async function sendPasswordSetupEmail(email: string) {
+async function getUserEmailByCustomerId(stripeCustomerId: string): Promise<string | null> {
   try {
-    const { data, error } = await supabase.auth.admin.generateLink({
-      type: "recovery",
-      email,
-    });
-
-    if (error) {
-      logger.error({ error, email }, "Failed to generate password setup link");
-      throw error;
+    const subscription = await subscriptionRepo.getSubscriptionByCustomerId(stripeCustomerId);
+    if (!subscription?.userId) {
+      logger.warn({ stripeCustomerId }, 'User not found for customer ID');
+      return null;
     }
 
-    logger.info(
-      { email, actionLink: data.properties.action_link },
-      "Password setup link generated (email sent by Supabase)"
-    );
+    const { data: user, error } = await supabase.auth.admin.getUserById(subscription.userId);
+    if (error || !user?.user?.email) {
+      logger.error({ error, userId: subscription.userId }, 'Failed to get user email');
+      return null;
+    }
 
-    // Supabase automatically sends the email
-    // The recovery link will allow the user to set their password
+    return user.user.email;
   } catch (error) {
-    logger.error({ error, email }, "Error sending password setup email");
-    throw error;
+    logger.error({ error, stripeCustomerId }, 'Error getting user email');
+    return null;
   }
 }
 

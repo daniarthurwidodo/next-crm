@@ -150,3 +150,20 @@ export async function subscriptionExists(stripeCustomerId: string): Promise<bool
     throw error;
   }
 }
+
+/**
+ * Get subscription status by Stripe customer ID
+ */
+export async function getSubscriptionStatus(stripeCustomerId: string): Promise<string | null> {
+  try {
+    const result = await pool.query(
+      `SELECT subscription_status FROM user_subscriptions WHERE stripe_customer_id = $1`,
+      [stripeCustomerId]
+    );
+
+    return result.rows[0]?.subscription_status || null;
+  } catch (error) {
+    logger.error({ error, stripeCustomerId }, "Failed to get subscription status");
+    throw error;
+  }
+}

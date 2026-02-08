@@ -2,6 +2,7 @@ import supabaseService from '../../lib/supabase/service'
 import { hashPassword } from '../../lib/utils/auth'
 import jwt from 'jsonwebtoken'
 import { createLogger } from '../logger'
+import { sendWelcomeEmail } from './emailService'
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret'
 const logger = createLogger({ module: 'service', service: 'register' })
@@ -35,6 +36,12 @@ export async function registerService(username: string, password: string) {
 
   logger.debug({ username }, 'Generating JWT token')
   const token = jwt.sign({ username }, JWT_SECRET, { expiresIn: '7d' })
+  
+  // Send welcome email (non-blocking - don't fail registration if email fails)
+  sendWelcomeEmail(email, username).catch((error) => {
+    logger.error({ username, email, error }, 'Failed to send welcome email, but registration succeeded')
+  })
+  
   logger.info({ username }, 'Registration service completed successfully')
   
   return { success: true, token, status: 201 }

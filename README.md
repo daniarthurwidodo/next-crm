@@ -14,8 +14,44 @@ Send any file to your Google Drive using a simple shortcode. Share your unique l
 ## Getting Started
 1. Clone the repo
 2. Install dependencies: `bun install`
-3. Set up environment variables for Supabase and Google OAuth
+3. Set up environment variables for Supabase, Google OAuth, and email (see below)
 4. Run dev server: `bun run dev`
+
+## Environment Variables
+
+Create a `.env.local` file in the project root with the following variables:
+
+### Required Variables
+```bash
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+
+# JWT
+JWT_SECRET=your_jwt_secret
+
+# Email (Mailtrap for dev/test, production SMTP for prod)
+SMTP_HOST=sandbox.smtp.mailtrap.io
+SMTP_PORT=2525
+SMTP_USER=your_mailtrap_username
+SMTP_PASS=your_mailtrap_password
+SMTP_SECURE=false
+EMAIL_FROM="Next CRM <noreply@nextcrm.com>"
+
+# Application URL
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+
+# Stripe (optional, for billing)
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=your_stripe_publishable_key
+STRIPE_SECRET_KEY=your_stripe_secret_key
+STRIPE_WEBHOOK_SECRET=your_webhook_secret
+
+# Google OAuth (optional, for Drive integration)
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+```
+
+See [docs/EMAIL_SETUP.md](docs/EMAIL_SETUP.md) for detailed email configuration instructions.
 
 ## Project Structure
 - `app/` – Next.js App Router pages
@@ -38,6 +74,6 @@ Open issues or PRs for improvements. See PRD.md for roadmap and specs.
 
 ## Documentation
 - **Docs folder:** `docs/` contains TODOs, specs, and team constitution.
-- **Quick links:** [TODO docs](docs/TODO.md), [Specs](docs/SPECS.md), [Constitution](docs/CONSTITUTION.md)
+- **Quick links:** [TODO docs](docs/TODO.md), [Specs](docs/SPECS.md), [Constitution](docs/CONSTITUTION.md), [Email Setup](docs/EMAIL_SETUP.md)
 
 If you're updating features or tests, update the relevant docs in `docs/` and the PRD.
