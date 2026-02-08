@@ -1,4 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
+import { createLogger } from '../logger'
+
+const logger = createLogger({ module: 'supabase', client: 'service' })
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -12,8 +15,10 @@ const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 // (missing env or createClient throws), fall back to a stub that throws
 // when used.
 function makeMissingEnvStub() {
+	logger.error('Supabase service client not configured - missing environment variables')
 	return new Proxy({}, {
 		get() {
+			logger.error('Attempted to use unconfigured Supabase service client')
 			throw new Error(
 				'Supabase service not configured. Set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.'
 			)
@@ -23,8 +28,10 @@ function makeMissingEnvStub() {
 
 let supabaseService: unknown;
 try {
+	logger.info('Initializing Supabase service role client')
 	supabaseService = createClient(supabaseUrl ?? '', supabaseServiceRoleKey ?? '')
-} catch {
+} catch (error) {
+	logger.error({ error: error instanceof Error ? error.message : 'Unknown error' }, 'Failed to create Supabase service client')
 	supabaseService = makeMissingEnvStub()
 }
 

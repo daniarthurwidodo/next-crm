@@ -32,7 +32,8 @@ export default function CheckoutPage({ params }: { params: Promise<{ plan: strin
       } catch (e: unknown) {
         // eslint prefers avoiding "any" – we treat the error as unknown and extract a message safely
         const message = e instanceof Error ? e.message : String(e);
-        console.error(e);
+        // Client-side logging - console.error is appropriate for browser environments
+        console.error('[Checkout] Failed to create Stripe session:', { plan, error: message, stack: e instanceof Error ? e.stack : undefined });
         setError(message);
       }
     }

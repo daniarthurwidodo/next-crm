@@ -1,6 +1,9 @@
 // Authentication logic for JWT and username/password
 import { createClient } from '@supabase/supabase-js';
 import jwt from 'jsonwebtoken';
+import { createLogger } from '../logger';
+
+const logger = createLogger({ module: 'util', utility: 'auth' });
 
 const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY!);
 
@@ -14,31 +17,51 @@ export interface AuthResult {
 
 export async function registerUser(username: string, password: string): Promise<AuthResult> {
   // Check if user exists
+  logger.debug({ username }, 'Checking if user exists');
   const { data: existing, error: findError } = await supabase
     .from('users')
     .select('id')
     .eq('username', username)
     .single();
-  if (existing) return { success: false, message: 'Username already exists' };
-  if (findError && findError.code !== 'PGRST116') return { success: false, message: findError.message };
+  if (existing) {
+    logger.warn({ username }, 'Username already exists');
+    return { success: false, message: 'Username already exists' };
+  }
+  if (findError && findError.code !== 'PGRST116') {
+    logger.error({ username, error: findError.message }, 'Error checking existing user');
+    return { success: false, message: findError.message };
+  }
 
   // Hash password (simple hash for demo, use bcrypt in production)
+  logger.debug({ username }, 'Hashing password');
   const hashed = await hashPassword(password);
   const { error } = await supabase.from('users').insert([{ username, password: hashed }]);
-  if (error) return { success: false, message: error.message };
+  if (error) {
+    logger.error({ username, error: error.message }, 'Error inserting user');
+    return { success: false, message: error.message };
+  }
+  logger.info({ username }, 'User registered successfully');
   const token = jwt.sign({ username }, JWT_SECRET, { expiresIn: '7d' });
   return { success: true, token };
 }
 
 export async function loginUser(username: string, password: string): Promise<AuthResult> {
+  logger.debug({ username }, 'Fetching user for login');
   const { data: user, error } = await supabase
     .from('users')
     .select('password')
     .eq('username', username)
     .single();
-  if (error || !user) return { success: false, message: 'Invalid username or password' };
+  if (error || !user) {
+    logger.warn({ username, error: error?.message }, 'User not found or error fetching user');
+    return { success: false, message: 'Invalid username or password' };
+  }
   const valid = await verifyPassword(password, user.password);
-  if (!valid) return { success: false, message: 'Invalid username or password' };
+  if (!valid) {
+    logger.warn({ username }, 'Invalid password');
+    return { success: false, message: 'Invalid username or password' };
+  }
+  logger.info({ username }, 'User logged in successfully');
   const token = jwt.sign({ username }, JWT_SECRET, { expiresIn: '7d' });
   return { success: true, token };
 }
@@ -46,8 +69,10 @@ export async function loginUser(username: string, password: string): Promise<Aut
 export function verifyJWT(token: string): { valid: boolean; username?: string } {
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as { username: string };
+    logger.debug({ username: decoded.username }, 'JWT verified successfully');
     return { valid: true, username: decoded.username };
-  } catch {
+  } catch (error) {
+    logger.warn({ error: error instanceof Error ? error.message : 'Unknown error' }, 'JWT verification failed');
     return { valid: false };
   }
 }
