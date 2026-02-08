@@ -1,6 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
 const plans = [
   {
@@ -37,7 +38,11 @@ export function Pricing() {
             <ul className="flex flex-col gap-2 text-base text-muted-foreground">
               {plan.features.map((f) => <li key={f}>• {f}</li>)}
             </ul>
-            <Button size="lg" className={plan.highlight ? "bg-primary text-primary-foreground hover:bg-primary/90" : ""}>{plan.cta}</Button>
+            <Link href={`/checkout/${plan.name.toLowerCase()}`}>
+              <Button size="lg" className={plan.highlight ? "bg-primary text-primary-foreground hover:bg-primary/90" : ""}>
+                {plan.cta}
+              </Button>
+            </Link>
           </Card>
         ))}
       </div>
