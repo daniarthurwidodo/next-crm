@@ -18,7 +18,13 @@ export default async function ProtectedDashboardLayout({ children }: { children:
 
   return (
     <div className="dashboard-container">
-      <Sidebar username={username} menuItems={[{ label: 'Dashboard' }]} />
+      <Sidebar
+        username={username}
+        menuItems={[
+          { label: 'Dashboard', href: '/dashboard' },
+          { label: 'Users', href: '/dashboard/users' }
+        ]}
+      />
       <main className="dashboard-main">
         <h1 className="dashboard-title">Welcome, {username}!</h1>
         {children}

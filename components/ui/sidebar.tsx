@@ -4,9 +4,14 @@ import React from 'react';
 import { useRouter } from 'next/navigation';
 import './sidebar.css';
 
+interface SidebarItem {
+  label: string;
+  href?: string;
+}
+
 interface SidebarProps {
   username: string;
-  menuItems?: Array<{ label: string; onClick?: () => void }>;
+  menuItems?: SidebarItem[];
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ username, menuItems = [] }) => {
@@ -30,7 +35,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ username, menuItems = [] }) =>
       console.error('Logout error:', error);
     }
   };
-
   return (
     <aside className="sidebar">
       <div className="sidebar-user">
@@ -42,11 +46,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ username, menuItems = [] }) =>
           <button
             key={idx}
             className="sidebar-menu-item"
-            onClick={item.onClick}
+            onClick={() => item.href ? router.push(item.href) : undefined}
           >
             {item.label}
           </button>
         ))}
+        {/* Logout button is always last for sticky positioning */}
         <button
           className="sidebar-menu-item logout-button"
           onClick={handleLogout}

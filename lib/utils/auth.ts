@@ -5,7 +5,19 @@ import { createLogger } from '../logger';
 
 const logger = createLogger({ module: 'util', utility: 'auth' });
 
-const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY!);
+// Lazy client initialization to avoid module-level environment variable access
+let _supabaseClient: ReturnType<typeof createClient> | null = null;
+function getSupabaseClient() {
+  if (!_supabaseClient) {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    if (!supabaseUrl || !supabaseKey) {
+      throw new Error('Missing Supabase credentials in environment variables');
+    }
+    _supabaseClient = createClient(supabaseUrl, supabaseKey);
+  }
+  return _supabaseClient;
+}
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret';
 
@@ -18,7 +30,7 @@ export interface AuthResult {
 export async function registerUser(username: string, password: string): Promise<AuthResult> {
   // Check if user exists
   logger.debug({ username }, 'Checking if user exists');
-  const { data: existing, error: findError } = await supabase
+  const { data: existing, error: findError } = await getSupabaseClient()
     .from('users')
     .select('id')
     .eq('username', username)
@@ -35,7 +47,7 @@ export async function registerUser(username: string, password: string): Promise<
   // Hash password (simple hash for demo, use bcrypt in production)
   logger.debug({ username }, 'Hashing password');
   const hashed = await hashPassword(password);
-  const { error } = await supabase.from('users').insert([{ username, password: hashed }]);
+  const { error } = await getSupabaseClient().from('users').insert([{ username, password: hashed }]);
   if (error) {
     logger.error({ username, error: error.message }, 'Error inserting user');
     return { success: false, message: error.message };
@@ -47,7 +59,7 @@ export async function registerUser(username: string, password: string): Promise<
 
 export async function loginUser(username: string, password: string): Promise<AuthResult> {
   logger.debug({ username }, 'Fetching user for login');
-  const { data: user, error } = await supabase
+  const { data: user, error } = await getSupabaseClient()
     .from('users')
     .select('password')
     .eq('username', username)

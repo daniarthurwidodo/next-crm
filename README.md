@@ -15,7 +15,8 @@ Send any file to your Google Drive using a simple shortcode. Share your unique l
 1. Clone the repo
 2. Install dependencies: `bun install`
 3. Set up environment variables for Supabase, Google OAuth, and email (see below)
-4. Run dev server: `bun run dev`
+4. Run database migrations (see Database Setup below)
+5. Run dev server: `bun run dev`
 
 ## Environment Variables
 
@@ -25,7 +26,7 @@ Create a `.env.local` file in the project root with the following variables:
 ```bash
 # Supabase
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 
 # JWT
 JWT_SECRET=your_jwt_secret
@@ -52,6 +53,22 @@ GOOGLE_CLIENT_SECRET=your_google_client_secret
 ```
 
 See [docs/EMAIL_SETUP.md](docs/EMAIL_SETUP.md) for detailed email configuration instructions.
+
+## Database Setup
+
+### Running Migrations
+
+1. Open your Supabase project dashboard
+2. Navigate to the SQL Editor
+3. Run migrations in order:
+   - `migrations/001_create_user_subscriptions.sql`
+   - `migrations/002_create_users_view.sql`
+
+Alternatively, copy the SQL from each migration file and paste it into the Supabase SQL Editor.
+
+### What the migrations do
+- **001**: Creates `user_subscriptions` table to store Stripe subscription data
+- **002**: Creates a `users` view that combines `auth.users` with subscription data
 
 ## Project Structure
 - `app/` – Next.js App Router pages

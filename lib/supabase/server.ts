@@ -6,9 +6,16 @@ import { createLogger } from "../logger";
 const logger = createLogger({ module: 'supabase', client: 'server' });
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY;
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 export async function createClient() {
+  if (!supabaseUrl || !supabaseKey) {
+    const missing = [];
+    if (!supabaseUrl) missing.push('NEXT_PUBLIC_SUPABASE_URL');
+    if (!supabaseKey) missing.push('NEXT_PUBLIC_SUPABASE_ANON_KEY');
+    throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
+  }
+  
   const cookieStore = await cookies();
   
   logger.debug('Creating Supabase server client');
