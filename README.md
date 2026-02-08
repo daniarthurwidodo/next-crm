@@ -35,3 +35,9 @@ Deploy on Vercel for best results. Configure environment variables for Supabase 
 
 ## Contributing
 Open issues or PRs for improvements. See PRD.md for roadmap and specs.
+
+## Documentation
+- **Docs folder:** `docs/` contains TODOs, specs, and team constitution.
+- **Quick links:** [TODO docs](docs/TODO.md), [Specs](docs/SPECS.md), [Constitution](docs/CONSTITUTION.md)
+
+If you're updating features or tests, update the relevant docs in `docs/` and the PRD.

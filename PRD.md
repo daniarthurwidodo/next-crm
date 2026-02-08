@@ -45,3 +45,11 @@ Transferring files to Google Drive from various devices or sharing upload links 
 1. MVP: Shortcode, upload page, Google Drive integration, free tier
 2. Pro tier, Stripe integration, dashboard
 3. Notifications, analytics, team features
+
+## Docs & Specs
+Core project documentation lives in `docs/` and should be kept in sync with this PRD.
+- [docs/TODO.md](docs/TODO.md): current tasks, completed work, and improvement areas.
+- [docs/SPECS.md](docs/SPECS.md): API and acceptance criteria.
+- [docs/CONSTITUTION.md](docs/CONSTITUTION.md): team conventions, branching, and PR rules.
+
+Acceptance criteria and release checklists should reference `docs/SPECS.md` before marking roadmap items complete.
