@@ -1,6 +1,7 @@
-import React from 'react';
+import { ReactNode } from 'react';
+import '../globals.css';
 
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="w-full py-4 bg-white shadow">
@@ -8,7 +9,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <a href="/dashboard" className="text-xl font-bold">Dashboard</a>
         </div>
       </header>
-      <main className="">{children}</main>
+      <main>{children}</main>
     </div>
   );
 }

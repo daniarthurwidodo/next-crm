@@ -1,4 +1,7 @@
+'use client';
+
 import React from 'react';
+import { useRouter } from 'next/navigation';
 import './sidebar.css';
 
 interface SidebarProps {
@@ -7,6 +10,27 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ username, menuItems = [] }) => {
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    try {
+      const response = await fetch('/api/logout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        router.push('/dashboard/login');
+      } else {
+        console.error('Logout failed');
+      }
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  };
+
   return (
     <aside className="sidebar">
       <div className="sidebar-user">
@@ -23,6 +47,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ username, menuItems = [] }) =>
             {item.label}
           </button>
         ))}
+        <button
+          className="sidebar-menu-item logout-button"
+          onClick={handleLogout}
+        >
+          Logout
+        </button>
       </nav>
     </aside>
   );

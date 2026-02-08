@@ -63,3 +63,16 @@
 .sidebar-menu-item:active {
   transform: translateX(2px);
 }
+
+.logout-button {
+  margin-top: auto;
+  background: rgba(231, 76, 60, 0.1);
+  color: #e74c3c;
+  border: 1px solid rgba(231, 76, 60, 0.3);
+}
+
+.logout-button:hover {
+  background: rgba(231, 76, 60, 0.2);
+  color: #e74c3c;
+  border-color: rgba(231, 76, 60, 0.5);
+}
