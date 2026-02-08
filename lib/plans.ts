@@ -3,15 +3,14 @@
 export const plans = {
   free: {
     name: "Free",
-    priceId: "price_0", // TODO: replace with actual Stripe price ID for the free tier
+    priceId: "price_1SyTsDCV46sldwAasQWrUPbP",
     displayName: "Start for Free",
   },
   pro: {
     name: "Pro",
-    priceId: "price_1", // TODO: replace with actual Stripe price ID for the Pro tier
+    priceId: "price_1SyTsECV46sldwAaWXtRAKMk",
     displayName: "Go Pro",
   },
 } as const;
 
 export type PlanKey = keyof typeof plans;
-
