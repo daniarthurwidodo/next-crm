@@ -93,4 +93,7 @@ Open issues or PRs for improvements. See PRD.md for roadmap and specs.
 - **Docs folder:** `docs/` contains TODOs, specs, and team constitution.
 - **Quick links:** [TODO docs](docs/TODO.md), [Specs](docs/SPECS.md), [Constitution](docs/CONSTITUTION.md), [Email Setup](docs/EMAIL_SETUP.md)
 
+## Style Guide
+We maintain a short style guide for small UI components and form patterns in `docs/styles.md`. It documents input padding, border, radius, grid layout for forms (2-column default), and accessibility expectations. When adding or updating components, link the implementation to `docs/styles.md` and keep the examples in sync.
+
 If you're updating features or tests, update the relevant docs in `docs/` and the PRD.

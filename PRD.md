@@ -52,4 +52,11 @@ Core project documentation lives in `docs/` and should be kept in sync with this
 - [docs/SPECS.md](docs/SPECS.md): API and acceptance criteria.
 - [docs/CONSTITUTION.md](docs/CONSTITUTION.md): team conventions, branching, and PR rules.
 
+### Style & UI Guidelines
+Design and implementation guidance for form and small UI components lives in `docs/styles.md`.
+- Forms should use a 2-column layout for related fields (inputs/selects) with sensible gap and a full-width row for larger fields (e.g. password, description).
+- Inputs and selects: 1px solid neutral border, 8px vertical padding, 6px border-radius to match app visual language.
+- Keep accessible labels and use server- and client-side validation (we use Zod for client validation patterns in pages/components).
+See `docs/styles.md` for detailed examples and CSS snippets.
+
 Acceptance criteria and release checklists should reference `docs/SPECS.md` before marking roadmap items complete.
