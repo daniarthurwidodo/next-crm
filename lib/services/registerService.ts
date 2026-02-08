@@ -12,6 +12,8 @@ export async function registerService(username: string, password: string) {
   const res = await (supabaseService as any).auth.admin.createUser({
     email,
     password,
+    // Auto-confirm so sign-in works immediately without email verification
+    email_confirm: true,
     user_metadata: { username, password_hash: hashed },
   })
 
