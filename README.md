@@ -89,13 +89,34 @@ GOOGLE_CLIENT_SECRET=your_google_client_secret
 See `docs/EMAIL_SETUP.md` for detailed email configuration and `docs/STRIPE_SETUP.md` for Stripe tips.
 
 ## Database Setup
-This repo includes SQL and migration helpers. You can run migrations manually (paste SQL into your Postgres/Supabase SQL editor) or use `drizzle-kit` if you prefer automated migrations.
+This repo uses Drizzle ORM with PostgreSQL. Migration files are stored in `drizzle/`.
 
-Basic steps:
-1. Inspect SQL files in `migrations/` and `drizzle/` and apply them to your database in order.
-2. Confirm the `users` and `user_subscriptions` tables/views exist and that the auth provider is configured.
+### Running Migrations
+Apply existing migrations to your database:
 
-If you use `drizzle-kit`, run the migrate command that's compatible with your configuration (check `drizzle.config.ts`).
+```bash
+bunx drizzle-kit migrate
+```
+
+Or manually copy SQL from `drizzle/*.sql` into your Postgres/Supabase SQL editor.
+
+### Creating New Migrations
+After modifying the schema in `lib/db/schema.ts`, generate a new migration:
+
+```bash
+bunx drizzle-kit generate
+```
+
+This creates a new SQL file in `drizzle/` based on schema changes. Then run migrations (above) to apply them.
+
+### View/Edit Tables in GUI
+Open Drizzle Studio to browse and edit database tables:
+
+```bash
+bunx drizzle-kit studio
+```
+
+Opens at http://localhost:4983.
 
 ## Project Structure
 - `app/` — Next.js App Router pages and routes
@@ -108,6 +129,7 @@ If you use `drizzle-kit`, run the migrate command that's compatible with your co
 - `npm run build` — Build for production
 - `npm run start` — Run production server
 - `npm run lint` — Run ESLint
+- `bunx drizzle-kit studio` — Open Drizzle Studio to browse/edit database tables in a GUI
 
 ## E2E tests (Playwright)
 Start the dev server, then run:
