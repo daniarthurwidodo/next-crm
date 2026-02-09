@@ -21,8 +21,37 @@ Send any file to your Google Drive using a simple shortcode. Share your unique l
 ## Environment Variables
 
 Create a `.env.local` file in the project root with the following variables:
+# File2Drive (next-crm)
 
-### Required Variables
+File2Drive lets people upload files directly into a user's Google Drive via a short, shareable shortcode. This repository contains the web app (Next.js) and backend integrations (Supabase + Stripe).
+
+## Highlights
+- Shortcode-based public upload pages
+- Uploads stored in the user's Google Drive via OAuth2
+- Free tier and paid subscriptions (Stripe)
+- Dashboard for managing uploads and settings
+- Built with Next.js 16, React 19, Tailwind CSS 4, `shadcn/ui`, and Supabase
+
+## Quickstart
+1. Clone the repo
+2. Install dependencies:
+
+```bash
+npm install
+```
+
+3. Create a `.env.local` in the project root (see required variables below)
+4. Run database migrations (see Database Setup)
+5. Start dev server:
+
+```bash
+npm run dev
+```
+
+## Environment Variables
+Create a `.env.local` file with the values your environment requires. Common variables used by the app:
+
+### Core / Required
 ```bash
 # Supabase
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
@@ -31,69 +60,74 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 # JWT
 JWT_SECRET=your_jwt_secret
 
-# Email (Mailtrap for dev/test, production SMTP for prod)
-SMTP_HOST=sandbox.smtp.mailtrap.io
-SMTP_PORT=2525
-SMTP_USER=your_mailtrap_username
-SMTP_PASS=your_mailtrap_password
-SMTP_SECURE=false
-EMAIL_FROM="Next CRM <noreply@nextcrm.com>"
-
 # Application URL
 NEXT_PUBLIC_APP_URL=http://localhost:3000
+```
 
-# Stripe (optional, for billing)
+### Email (dev / prod)
+```bash
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_USER=your_smtp_user
+SMTP_PASS=your_smtp_pass
+SMTP_SECURE=false
+EMAIL_FROM="Next CRM <noreply@nextcrm.com>"
+```
+
+### Billing / OAuth (optional)
+```bash
+# Stripe
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=your_stripe_publishable_key
 STRIPE_SECRET_KEY=your_stripe_secret_key
 STRIPE_WEBHOOK_SECRET=your_webhook_secret
 
-# Google OAuth (optional, for Drive integration)
+# Google OAuth (if using Drive integration)
 GOOGLE_CLIENT_ID=your_google_client_id
 GOOGLE_CLIENT_SECRET=your_google_client_secret
 ```
 
-See [docs/EMAIL_SETUP.md](docs/EMAIL_SETUP.md) for detailed email configuration instructions.
+See `docs/EMAIL_SETUP.md` for detailed email configuration and `docs/STRIPE_SETUP.md` for Stripe tips.
 
 ## Database Setup
+This repo includes SQL and migration helpers. You can run migrations manually (paste SQL into your Postgres/Supabase SQL editor) or use `drizzle-kit` if you prefer automated migrations.
 
-### Running Migrations
+Basic steps:
+1. Inspect SQL files in `migrations/` and `drizzle/` and apply them to your database in order.
+2. Confirm the `users` and `user_subscriptions` tables/views exist and that the auth provider is configured.
 
-1. Open your Supabase project dashboard
-2. Navigate to the SQL Editor
-3. Run migrations in order:
-   - `migrations/001_create_user_subscriptions.sql`
-   - `migrations/002_create_users_view.sql`
-
-Alternatively, copy the SQL from each migration file and paste it into the Supabase SQL Editor.
-
-### What the migrations do
-- **001**: Creates `user_subscriptions` table to store Stripe subscription data
-- **002**: Creates a `users` view that combines `auth.users` with subscription data
+If you use `drizzle-kit`, run the migrate command that's compatible with your configuration (check `drizzle.config.ts`).
 
 ## Project Structure
-- `app/` – Next.js App Router pages
-- `components/` – UI and landing page components
-- `lib/` – Utilities and Supabase clients
+- `app/` — Next.js App Router pages and routes
+- `components/` — UI and landing components
+- `lib/` — utilities, controllers, and service integrations
+- `docs/` — project documentation, specs, and runbooks
 
 ## Scripts
-- `bun run dev` – Start dev server
-- `bun run build` – Build for production
-- `bun run lint` – Lint code
+- `npm run dev` — Start development server (Next.js)
+- `npm run build` — Build for production
+- `npm run start` — Run production server
+- `npm run lint` — Run ESLint
 
 ## E2E tests (Playwright)
-Run `bunx playwright test` (ensure the dev server is running on the configured base URL). Optional env vars: `E2E_TEST_USER` and `E2E_TEST_PASSWORD` for a pre-created test user; if unset, defaults `e2euser` / `e2epassword` are used for fixtures that need credentials.
+Start the dev server, then run:
+
+```bash
+npx playwright test
+```
+
+Optional env vars for test fixtures: `E2E_TEST_USER` and `E2E_TEST_PASSWORD`.
 
 ## Deployment
-Deploy on Vercel for best results. Configure environment variables for Supabase and Google OAuth.
+Vercel is the recommended platform for this Next.js app. Ensure environment variables are set in the deployment environment and that any webhooks (Stripe) are configured with appropriate publicly reachable endpoints.
 
 ## Contributing
-Open issues or PRs for improvements. See PRD.md for roadmap and specs.
+- Open issues for bugs or feature requests
+- Send PRs with changes and link related docs in `docs/`
 
-## Documentation
-- **Docs folder:** `docs/` contains TODOs, specs, and team constitution.
-- **Quick links:** [TODO docs](docs/TODO.md), [Specs](docs/SPECS.md), [Constitution](docs/CONSTITUTION.md), [Email Setup](docs/EMAIL_SETUP.md)
+## Docs
+- Core documentation lives in `docs/` (PRD, specs, TODOs, runbooks)
+- See `docs/SPECS.md` and `docs/TODO.md` for work in progress and acceptance criteria
 
 ## Style Guide
-We maintain a short style guide for small UI components and form patterns in `docs/styles.md`. It documents input padding, border, radius, grid layout for forms (2-column default), and accessibility expectations. When adding or updating components, link the implementation to `docs/styles.md` and keep the examples in sync.
-
-If you're updating features or tests, update the relevant docs in `docs/` and the PRD.
+See `docs/styles.md` for UI conventions and component patterns.
